@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
+import { todayKST } from '@/lib/utils/date';
 
 /**
  * 환자를 m-view에 수동으로 추가 / 제거 토글
@@ -42,7 +43,7 @@ export async function excludeFromMviewAction(formData: FormData): Promise<{ erro
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: '로그인 필요' };
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayKST();
   const { error } = await supabase
     .from('patients')
     .update({ mview_excluded_date: today })

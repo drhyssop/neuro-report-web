@@ -114,18 +114,20 @@ function PatientBlock({ r }: { r: PatientReportData }) {
   const ward = r.ward ? `[${r.ward}] ` : '';
   const ageSex = r.age != null ? `${r.age}${r.sex || ''}` : '';
 
-  // 수술 정보
+  // 수술 정보 (POD#0=오늘, POD#1=어제 강조)
+  const podLabel = (pod: number) =>
+    pod === 0 ? 'POD #0 (오늘)' : pod === 1 ? 'POD #1 (어제)' : `POD #${pod}`;
   let surgeryText = '';
   if (r.surgeryName) {
     if (r.surgeryStatus === 'done' && r.pod != null) {
-      surgeryText = `${r.surgeryName} · POD #${r.pod}`;
+      surgeryText = `${r.surgeryName} · ${podLabel(r.pod)}`;
     } else if (r.surgeryStatus === 'planned' && r.surgeryDateNatural) {
       surgeryText = `${r.surgeryName} · ${r.surgeryDateNatural} 예정`;
     } else {
       surgeryText = r.surgeryName;
     }
   }
-  if (r.bmd) surgeryText = surgeryText ? `${surgeryText}  BMD: ${r.bmd}` : `BMD: ${r.bmd}`;
+  // BMD는 수술명 옆이 아니라 아래 별도 줄로 (복용약 위)
 
   // 오늘 변화 (실제 ▲▼ 텍스트). reviewed 여부에 따라 미확인/변화없음/변화 표시
   const changeChips: { text: string; kind: 'up' | 'down' | 'other' }[] = [
@@ -179,8 +181,20 @@ function PatientBlock({ r }: { r: PatientReportData }) {
         )}
         {r.drainsActive > 0 && (
           <Row label="Drain">
-            <span className="font-bold text-slate-800 dark:text-slate-100">
-              {r.drainsText || `활성 ${r.drainsActive}개`}
+            <span className="text-slate-800 dark:text-slate-100">
+              {r.drainsText
+                ? r.drainsText.split(/(\(<[^)]*\))/).map((seg, i) =>
+                    seg.startsWith('(<') ? (
+                      <span key={i} className="font-normal text-slate-500 dark:text-slate-400">
+                        {seg}
+                      </span>
+                    ) : (
+                      <span key={i} className="font-bold">
+                        {seg}
+                      </span>
+                    ),
+                  )
+                : `활성 ${r.drainsActive}개`}
             </span>
           </Row>
         )}
@@ -201,29 +215,32 @@ function PatientBlock({ r }: { r: PatientReportData }) {
           )}
         </Row>
         <Row label="입원시 Physical">
-          {r.baselinePhysical.length === 0 ? (
+          {r.baselinePhysicalGroups.length === 0 ? (
             <span className="text-emerald-600 dark:text-emerald-400">intact</span>
           ) : (
-            <span className="text-amber-700 dark:text-amber-400">{r.baselinePhysical.join(', ')}</span>
+            <span className="inline-flex flex-col gap-0.5">
+              {r.baselinePhysicalGroups.map((g) => (
+                <span key={g.label}>
+                  <span className="text-slate-400 dark:text-slate-500">{g.label}: </span>
+                  <span
+                    className={
+                      g.severe
+                        ? 'font-semibold text-red-600 dark:text-red-400'
+                        : 'text-amber-700 dark:text-amber-400'
+                    }
+                  >
+                    {g.items.join(', ')}
+                  </span>
+                </span>
+              ))}
+            </span>
           )}
         </Row>
 
-        {/* 입원(baseline) 대비 변화 + 회진 확인 상태 */}
-        <Row label="입원 대비">
-          {!r.reviewed ? (
-            <span className="inline-flex flex-wrap items-center gap-1.5">
-              <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-medium text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-                미확인
-              </span>
-              {[...r.baselineSymptoms, ...r.baselinePhysical].length > 0 && (
-                <span className="text-[11px] text-slate-400 dark:text-slate-500">
-                  (참고: {[...r.baselineSymptoms, ...r.baselinePhysical].join(', ')})
-                </span>
-              )}
-            </span>
-          ) : changeChips.length === 0 ? (
-            <span className="text-slate-400">변화 없음</span>
-          ) : (
+        {/* 입원(baseline) 대비 변화 — 오늘 입력이 있어 실제 변화가 있을 때만 표시.
+            미확인/변화없음은 굳이 띄우지 않음 (baseline은 위에 이미 보임). */}
+        {r.reviewed && changeChips.length > 0 && (
+          <Row label="입원 대비">
             <span className="inline-flex flex-wrap items-center gap-1">
               {changeChips.map((c, i) => (
                 <span
@@ -241,8 +258,8 @@ function PatientBlock({ r }: { r: PatientReportData }) {
                 </span>
               ))}
             </span>
-          )}
-        </Row>
+          </Row>
+        )}
 
         {abxText && <Row label="항생제">{abxText}</Row>}
 
@@ -276,6 +293,12 @@ function PatientBlock({ r }: { r: PatientReportData }) {
         {r.patientMemo && (
           <Row label="메모">
             <span className="whitespace-pre-wrap text-slate-600 dark:text-slate-300">{r.patientMemo}</span>
+          </Row>
+        )}
+
+        {r.bmd && (
+          <Row label="BMD">
+            <span className="text-slate-700 dark:text-slate-200">{r.bmd}</span>
           </Row>
         )}
 

@@ -122,13 +122,12 @@ export function PrintClient({ sections, reports, date }: Props) {
         // 세부 라인들 ({text, bold?})
         const lines: { text: string; bold?: boolean }[] = [];
         if (r.surgeryName) {
-          if (r.surgeryStatus === 'done' && r.pod != null)
-            lines.push({ text: `수술: ${r.surgeryName} · POD #${r.pod}${r.bmd ? `  BMD: ${r.bmd}` : ''}`, bold: true });
-          else if (r.surgeryStatus === 'planned' && r.surgeryDateNatural)
-            lines.push({ text: `수술: ${r.surgeryName} · ${r.surgeryDateNatural} 예정${r.bmd ? `  BMD: ${r.bmd}` : ''}`, bold: true });
-          else lines.push({ text: `수술: ${r.surgeryName}${r.bmd ? `  BMD: ${r.bmd}` : ''}`, bold: true });
-        } else if (r.bmd) {
-          lines.push({ text: `BMD: ${r.bmd}` });
+          if (r.surgeryStatus === 'done' && r.pod != null) {
+            const pl = r.pod === 0 ? 'POD #0 (오늘)' : r.pod === 1 ? 'POD #1 (어제)' : `POD #${r.pod}`;
+            lines.push({ text: `수술: ${r.surgeryName} · ${pl}`, bold: true });
+          } else if (r.surgeryStatus === 'planned' && r.surgeryDateNatural)
+            lines.push({ text: `수술: ${r.surgeryName} · ${r.surgeryDateNatural} 예정`, bold: true });
+          else lines.push({ text: `수술: ${r.surgeryName}`, bold: true });
         }
         if (r.drainsActive > 0)
           lines.push({ text: `Drain: ${r.drainsText || `활성 ${r.drainsActive}개`}`, bold: true });
@@ -136,18 +135,19 @@ export function PrintClient({ sections, reports, date }: Props) {
         lines.push({
           text: `입원시 증상: ${r.baselineSymptoms.length > 0 ? r.baselineSymptoms.join(', ') : '특이사항 없음'}`,
         });
-        lines.push({ text: `입원시 Physical: ${r.baselinePhysical.length > 0 ? r.baselinePhysical.join(', ') : 'intact'}` });
-        {
-          if (!r.reviewed) {
-            const ref = [...r.baselineSymptoms, ...r.baselinePhysical];
-            lines.push({ text: `입원 대비: 미확인${ref.length > 0 ? ` (참고: ${ref.join(', ')})` : ''}` });
-          } else {
-            const cps: string[] = [];
-            for (const t of r.changeBits.improved) cps.push(`▲${t}`);
-            for (const t of r.changeBits.worsened) cps.push(`▼${t}`);
-            for (const t of r.changeBits.other) cps.push(t);
-            lines.push({ text: `입원 대비: ${cps.length > 0 ? cps.join(', ') : '변화 없음'}` });
-          }
+        lines.push({
+          text: `입원시 Physical: ${
+            r.baselinePhysicalGroups.length > 0
+              ? r.baselinePhysicalGroups.map((g) => `${g.label}: ${g.items.join(', ')}`).join(' / ')
+              : 'intact'
+          }`,
+        });
+        if (r.reviewed) {
+          const cps: string[] = [];
+          for (const t of r.changeBits.improved) cps.push(`▲${t}`);
+          for (const t of r.changeBits.worsened) cps.push(`▼${t}`);
+          for (const t of r.changeBits.other) cps.push(t);
+          if (cps.length > 0) lines.push({ text: `입원 대비: ${cps.join(', ')}` });
         }
         if (r.ongoingAntibiotics.length > 0) {
           lines.push({
@@ -157,6 +157,7 @@ export function PrintClient({ sections, reports, date }: Props) {
         if (r.dailyNote) lines.push({ text: `오늘 소견: ${r.dailyNote.replace(/\n/g, ' ')}` });
         if (r.patientMemo) lines.push({ text: `메모: ${r.patientMemo.replace(/\n/g, ' ')}` });
         for (const c of r.consults) lines.push({ text: `협진: ${formatConsultLine(c)}` });
+        if (r.bmd) lines.push({ text: `BMD: ${r.bmd}` });
         if (r.medicationsText) lines.push({ text: `복용약: ${r.medicationsText}` });
         if (r.labsText) lines.push({ text: `lab: ${r.labsText}` });
 
@@ -321,7 +322,17 @@ function MViewPrintRow({ patient: p, isFollowup }: { patient: MViewPatient; isFo
       <div className="ml-4 space-y-0.5 text-[11px]">
         {isFollowup ? (
           <>
-            {/* F/U: 영상(followup만) → 수술만 */}
+            {/* F/U: 수술명(볼드) 먼저 → 그 다음 영상 */}
+            {(p.surgeryName || p.surgeryLabel) && (
+              <div>
+                <span className="font-medium">수술:</span>{' '}
+                {p.surgeryType === 'local' && (
+                  <span className="mr-0.5 rounded bg-amber-500 px-1 text-[9px] font-bold text-white">L</span>
+                )}
+                <span className="font-bold">{p.surgeryName}</span>
+                {p.surgeryLabel && <span className="ml-1">({p.surgeryLabel})</span>}
+              </div>
+            )}
             {p.followupFindings.length > 0 && (
               <div>
                 <span className="font-medium">영상:</span>
@@ -330,16 +341,6 @@ function MViewPrintRow({ patient: p, isFollowup }: { patient: MViewPatient; isFo
                     <li key={i}>{f}</li>
                   ))}
                 </ul>
-              </div>
-            )}
-            {(p.surgeryName || p.surgeryLabel) && (
-              <div>
-                <span className="font-medium">수술:</span>{' '}
-                {p.surgeryType === 'local' && (
-                  <span className="mr-0.5 rounded bg-amber-500 px-1 text-[9px] font-bold text-white">L</span>
-                )}
-                {p.surgeryName}
-                {p.surgeryLabel && <span className="ml-1">({p.surgeryLabel})</span>}
               </div>
             )}
           </>
@@ -351,7 +352,7 @@ function MViewPrintRow({ patient: p, isFollowup }: { patient: MViewPatient; isFo
                 {p.surgeryType === 'local' && (
                   <span className="mr-0.5 rounded bg-amber-500 px-1 text-[9px] font-bold text-white">L</span>
                 )}
-                {p.surgeryName}
+                <span className="font-bold">{p.surgeryName}</span>
                 {p.surgeryLabel && <span className="ml-1">({p.surgeryLabel})</span>}
               </div>
             )}
@@ -423,18 +424,22 @@ function mviewPatientToParagraphs(p: MViewPatient, isFollowup?: boolean): Paragr
     if (p.surgeryName || p.surgeryLabel)
       ps.push(
         new Paragraph({
-          text: `${indent}수술: ${p.surgeryType === 'local' ? '[L] ' : ''}${p.surgeryName ?? ''}${p.surgeryLabel ? ` (${p.surgeryLabel})` : ''}`,
+          children: [
+            new TextRun({ text: `${indent}수술: ${p.surgeryType === 'local' ? '[L] ' : ''}` }),
+            new TextRun({ text: `${p.surgeryName ?? ''}`, bold: true }),
+            new TextRun({ text: `${p.surgeryLabel ? ` (${p.surgeryLabel})` : ''}` }),
+          ],
         }),
       );
   };
 
   if (isFollowup) {
-    // F/U: 영상(followup만) → 수술만
+    // F/U: 수술명(볼드) 먼저 → 그 다음 영상
+    surgery();
     if (p.followupFindings.length > 0) {
       ps.push(new Paragraph({ text: `${indent}영상:` }));
       for (const f of p.followupFindings) ps.push(new Paragraph({ text: `${indent}  - ${f}` }));
     }
-    surgery();
   } else {
     surgery();
     if (p.historyHx) ps.push(new Paragraph({ text: `${indent}hx: ${p.historyHx}` }));

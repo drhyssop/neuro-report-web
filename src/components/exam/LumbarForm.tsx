@@ -131,6 +131,8 @@ export function LumbarForm({ value, yesterday, onChange, onAutoInit, dailyExtras
           region="lumbar"
           entries={painEntries}
           onChange={(entries) => onChange({ ...value, sensoryPain: entries })}
+          dominance={value.radicularDominance}
+          onDominanceChange={(d) => onChange({ ...value, radicularDominance: d })}
         />
       </Section>
 

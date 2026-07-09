@@ -86,13 +86,13 @@ export function MViewClient({ sections, pickerPatients }: Props) {
         const consult = p.isConsult ? ` · 협진(${p.consultDept || ''})` : '';
         lines.push(`${i + 1}. ${head}${ageStr}${sp}${consult}`);
         if (isFu) {
-          // F/U: 영상(followup만) 먼저, 수술까지만
+          // F/U: 수술명 먼저 → 그 다음 영상
+          if (p.surgeryName || p.surgeryLabel)
+            lines.push(`   수술: ${p.surgeryType === 'local' ? '[L] ' : ''}${p.surgeryName ?? ''}${p.surgeryLabel ? ` (${p.surgeryLabel})` : ''}`);
           if (p.followupFindings.length > 0) {
             lines.push(`   영상:`);
             for (const f of p.followupFindings) lines.push(`     - ${f}`);
           }
-          if (p.surgeryName || p.surgeryLabel)
-            lines.push(`   수술: ${p.surgeryType === 'local' ? '[L] ' : ''}${p.surgeryName ?? ''}${p.surgeryLabel ? ` (${p.surgeryLabel})` : ''}`);
         } else {
           if (p.surgeryName || p.surgeryLabel)
             lines.push(`   수술: ${p.surgeryType === 'local' ? '[L] ' : ''}${p.surgeryName ?? ''}${p.surgeryLabel ? ` (${p.surgeryLabel})` : ''}`);
@@ -429,7 +429,18 @@ function SortableMViewCard({
       >
         {isFollowup ? (
           <>
-            {/* F/U 검사 환자: 영상 먼저, 그 다음 수술. 증상/피지컬/abx/메모는 생략 (환자일보에서 확인) */}
+            {/* F/U 검사 환자: 수술명(볼드) 먼저 → 그 다음 영상 */}
+            {(p.surgeryName || p.surgeryLabel) && (
+              <Row label="수술">
+                {p.surgeryType === 'local' && (
+                  <span className="mr-1 rounded bg-amber-500 px-1 text-[10px] font-bold text-white">L</span>
+                )}
+                <span className="font-bold">{p.surgeryName}</span>
+                {p.surgeryLabel && (
+                  <span className="ml-2 font-normal text-slate-500 dark:text-slate-400">({p.surgeryLabel})</span>
+                )}
+              </Row>
+            )}
             {p.followupFindings.length > 0 && (
               <div className="flex gap-2">
                 <span className="shrink-0 font-medium text-slate-500 dark:text-slate-400">영상:</span>
@@ -440,17 +451,6 @@ function SortableMViewCard({
                 </div>
               </div>
             )}
-            {(p.surgeryName || p.surgeryLabel) && (
-              <Row label="수술">
-                {p.surgeryType === 'local' && (
-                  <span className="mr-1 rounded bg-amber-500 px-1 text-[10px] font-bold text-white">L</span>
-                )}
-                {p.surgeryName}
-                {p.surgeryLabel && (
-                  <span className="ml-2 text-slate-500 dark:text-slate-400">({p.surgeryLabel})</span>
-                )}
-              </Row>
-            )}
           </>
         ) : (
           <>
@@ -459,9 +459,9 @@ function SortableMViewCard({
                 {p.surgeryType === 'local' && (
                   <span className="mr-1 rounded bg-amber-500 px-1 text-[10px] font-bold text-white">L</span>
                 )}
-                {p.surgeryName}
+                <span className="font-bold">{p.surgeryName}</span>
                 {p.surgeryLabel && (
-                  <span className="ml-2 text-slate-500 dark:text-slate-400">({p.surgeryLabel})</span>
+                  <span className="ml-2 font-normal text-slate-500 dark:text-slate-400">({p.surgeryLabel})</span>
                 )}
               </Row>
             )}

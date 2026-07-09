@@ -22,6 +22,8 @@ import {
   formatDrainsLog,
   buildSymptomList,
   buildPhysicalList,
+  buildPhysicalGrouped,
+
 } from './examFormatters';
 
 export interface PatientReportData {
@@ -60,6 +62,7 @@ export interface PatientReportData {
   // baseline (입원 시 기존 증상/physical)
   baselineSymptoms: string[];
   baselinePhysical: string[];
+  baselinePhysicalGroups: { label: string; items: string[]; severe?: boolean }[];
   // 참고 정보
   patientMemo: string | null;
   // 오늘 소견 (서술형, 오늘자 exam의 daily_note)
@@ -169,6 +172,7 @@ export function collectReports(
     const { symptoms: blSymRaw } = buildSymptomList(baseline);
     const baselineSymptoms = blSymRaw.filter((s) => s !== '통증 없음');
     const baselinePhysical = buildPhysicalList(baseline);
+    const baselinePhysicalGroups = buildPhysicalGrouped(baseline);
 
     const notes: string[] = [];
     const hxBits: string[] = [];
@@ -209,6 +213,7 @@ export function collectReports(
       notesToday: notes.join(' / '),
       baselineSymptoms: baselineSymptoms,
       baselinePhysical: baselinePhysical,
+      baselinePhysicalGroups: baselinePhysicalGroups,
       patientMemo: p.patient_memo ?? null,
       dailyNote: (latestExam?.daily_note as string | null) ?? null,
       consults: [...((p.consults_log as ConsultReferral[] | null) ?? [])].sort((a, b) =>

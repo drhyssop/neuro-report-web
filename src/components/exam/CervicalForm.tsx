@@ -117,6 +117,8 @@ export function CervicalForm({ value, yesterday, onChange, onAutoInit, dailyExtr
           region="cervical"
           entries={painEntries}
           onChange={(entries) => onChange({ ...value, sensoryPain: entries })}
+          dominance={value.radicularDominance}
+          onDominanceChange={(d) => onChange({ ...value, radicularDominance: d })}
         />
       </Section>
 

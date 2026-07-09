@@ -9,6 +9,8 @@ interface Props {
   region: Region;
   entries: DermatomePainEntry[];
   onChange: (entries: DermatomePainEntry[]) => void;
+  dominance?: 'R>L' | 'L>R';
+  onDominanceChange?: (d: 'R>L' | 'L>R' | undefined) => void;
 }
 
 const DERMATOMES_BY_REGION: Record<Region, string[]> = {
@@ -35,7 +37,7 @@ const DERMATOME_MAP_SRC: Partial<Record<Region, string>> = {
  *     (호환을 위해 기존 구조 유지하되 dermatome 필드에 콤마 join)
  *   - note: 자유 메모
  */
-export function DermatomePain({ region, entries, onChange }: Props) {
+export function DermatomePain({ region, entries, onChange, dominance, onDominanceChange }: Props) {
   const dermatomes = DERMATOMES_BY_REGION[region];
 
   if (dermatomes.length === 0) {
@@ -161,6 +163,36 @@ export function DermatomePain({ region, entries, onChange }: Props) {
           onClear={() => clearSide('Lt')}
         />
       </div>
+
+      {/* 양측 통증 시 우세측 선택 (both L5 (R>L) 표기용) */}
+      {getSelected('Rt').length > 0 && getSelected('Lt').length > 0 && onDominanceChange && (
+        <div className="flex items-center gap-2 rounded-md border border-slate-200 p-2 dark:border-slate-700">
+          <span className="text-[11px] text-slate-500 dark:text-slate-400">더 심한 쪽:</span>
+          {([['R>L', 'Rt 우세'], ['L>R', 'Lt 우세']] as const).map(([val, label]) => (
+            <button
+              key={val}
+              type="button"
+              onClick={() => onDominanceChange(dominance === val ? undefined : val)}
+              className={
+                dominance === val
+                  ? 'rounded-md border border-slate-900 bg-slate-900 px-2.5 py-1 text-xs font-medium text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900'
+                  : 'rounded-md border border-slate-300 px-2.5 py-1 text-xs text-slate-600 dark:border-slate-600 dark:text-slate-300'
+              }
+            >
+              {label}
+            </button>
+          ))}
+          {dominance && (
+            <button
+              type="button"
+              onClick={() => onDominanceChange(undefined)}
+              className="text-[11px] text-slate-400"
+            >
+              해제 (=)
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

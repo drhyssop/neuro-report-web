@@ -37,31 +37,31 @@ export function BoardReportClient({ reports, date }: Props) {
       lines.push(`${consult}${ward}${seat}${r.alias}${ageSex} · HD#${r.hospitalDay}${sp}`);
 
       if (r.surgeryName) {
-        if (r.surgeryStatus === 'done' && r.pod != null)
-          lines.push(`  수술: ${r.surgeryName} · POD #${r.pod}${r.bmd ? `  BMD: ${r.bmd}` : ''}`);
-        else if (r.surgeryStatus === 'planned' && r.surgeryDateNatural)
-          lines.push(`  수술: ${r.surgeryName} · ${r.surgeryDateNatural} 예정${r.bmd ? `  BMD: ${r.bmd}` : ''}`);
-        else lines.push(`  수술: ${r.surgeryName}${r.bmd ? `  BMD: ${r.bmd}` : ''}`);
-      } else if (r.bmd) {
-        lines.push(`  BMD: ${r.bmd}`);
+        if (r.surgeryStatus === 'done' && r.pod != null) {
+          const pl = r.pod === 0 ? 'POD #0 (오늘)' : r.pod === 1 ? 'POD #1 (어제)' : `POD #${r.pod}`;
+          lines.push(`  수술: ${r.surgeryName} · ${pl}`);
+        } else if (r.surgeryStatus === 'planned' && r.surgeryDateNatural)
+          lines.push(`  수술: ${r.surgeryName} · ${r.surgeryDateNatural} 예정`);
+        else lines.push(`  수술: ${r.surgeryName}`);
       }
       if (r.drainsActive > 0) lines.push(`  Drain: ${r.drainsText || `활성 ${r.drainsActive}개`}`);
       if (r.fever) lines.push(`  발열: ${r.feverTemp ? `${r.feverTemp}°C` : '있음'}`);
       lines.push(
         `  입원시 증상: ${r.baselineSymptoms.length > 0 ? r.baselineSymptoms.join(', ') : '특이사항 없음'}`,
       );
-      lines.push(`  입원시 Physical: ${r.baselinePhysical.length > 0 ? r.baselinePhysical.join(', ') : 'intact'}`);
-      {
-        if (!r.reviewed) {
-          const ref = [...r.baselineSymptoms, ...r.baselinePhysical];
-          lines.push(`  입원 대비: 미확인${ref.length > 0 ? ` (참고: ${ref.join(', ')})` : ''}`);
-        } else {
-          const cps: string[] = [];
-          for (const t of r.changeBits.improved) cps.push(`▲${t}`);
-          for (const t of r.changeBits.worsened) cps.push(`▼${t}`);
-          for (const t of r.changeBits.other) cps.push(t);
-          lines.push(`  입원 대비: ${cps.length > 0 ? cps.join(', ') : '변화 없음'}`);
-        }
+      lines.push(
+        `  입원시 Physical: ${
+          r.baselinePhysicalGroups.length > 0
+            ? r.baselinePhysicalGroups.map((g) => `${g.label}: ${g.items.join(', ')}`).join(' / ')
+            : 'intact'
+        }`,
+      );
+      if (r.reviewed) {
+        const cps: string[] = [];
+        for (const t of r.changeBits.improved) cps.push(`▲${t}`);
+        for (const t of r.changeBits.worsened) cps.push(`▼${t}`);
+        for (const t of r.changeBits.other) cps.push(t);
+        if (cps.length > 0) lines.push(`  입원 대비: ${cps.join(', ')}`);
       }
       if (r.ongoingAntibiotics.length > 0) {
         lines.push(
@@ -71,6 +71,7 @@ export function BoardReportClient({ reports, date }: Props) {
       if (r.dailyNote) lines.push(`  오늘 소견: ${r.dailyNote.replace(/\n/g, ' ')}`);
       if (r.patientMemo) lines.push(`  메모: ${r.patientMemo.replace(/\n/g, ' ')}`);
       for (const c of r.consults) lines.push(`  협진: ${formatConsultLine(c)}`);
+      if (r.bmd) lines.push(`  BMD: ${r.bmd}`);
       if (r.medicationsText) lines.push(`  복용약: ${r.medicationsText}`);
       if (r.labsText) lines.push(`  lab: ${r.labsText}`);
       lines.push('');

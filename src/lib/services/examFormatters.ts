@@ -221,30 +221,60 @@ function formatRadicularItem(
 ): string {
   const exam = regions[region];
   const entries = ((exam as { sensoryPain?: unknown[] })?.sensoryPain ?? []) as DermatomePainEntry[];
+  const dominance = (exam as { radicularDominance?: 'R>L' | 'L>R' })?.radicularDominance;
 
-  // side별 묶음 (Rt 먼저)
-  const sidesBits: string[] = [];
-  for (const sideKey of ['Rt', 'Lt'] as const) {
-    const matching = entries.filter((e) => String(e.side) === sideKey && (e.dermatome || e.note));
-    for (const e of matching) {
-      const ders = e.dermatome ? e.dermatome.split(',').filter(Boolean) : [];
-      if (ders.length === 0) continue;
-      const quals = e.dermatomeQualities ?? {};
-      const painDers = ders.filter((d) => (quals[d] ?? 'pain') === 'pain');
-      const tinglingDers = ders.filter((d) => quals[d] === 'tingling');
-
-      const parts: string[] = [];
-      if (painDers.length > 0) parts.push(`${painDers.join(', ')} pain`);
-      if (tinglingDers.length > 0) parts.push(`${tinglingDers.join(', ')} tingling`);
-      if (parts.length > 0) sidesBits.push(`${sideKey} ${parts.join(', ')}`);
+  // dermatome × quality(pain/tingling) 별로 어느 side가 있는지 수집
+  //   key = `${dermatome}|${quality}` → { rt, lt }
+  const map = new Map<string, { derm: string; qual: 'pain' | 'tingling'; rt: boolean; lt: boolean }>();
+  const noteBits: string[] = [];
+  for (const e of entries) {
+    const side = String(e.side);
+    if (e.note?.trim()) noteBits.push(e.note.trim());
+    const ders = e.dermatome ? e.dermatome.split(',').filter(Boolean) : [];
+    const quals = e.dermatomeQualities ?? {};
+    for (const d of ders) {
+      const q: 'pain' | 'tingling' = quals[d] === 'tingling' ? 'tingling' : 'pain';
+      const key = `${d}|${q}`;
+      const cur = map.get(key) ?? { derm: d, qual: q, rt: false, lt: false };
+      if (side === 'Rt') cur.rt = true;
+      else if (side === 'Lt') cur.lt = true;
+      map.set(key, cur);
     }
   }
 
+  // dermatome 정렬 (C3..T1, L1..S3) — 문자열 정렬로 충분 (C/L/S/T 접두 + 숫자)
+  const levelOrder = (d: string) => {
+    const m = d.match(/^([A-Za-z]+)(\d+)$/);
+    if (!m) return 999;
+    const prefix = { C: 0, T: 100, L: 200, S: 300 }[m[1].toUpperCase()[0]] ?? 900;
+    return prefix + parseInt(m[2], 10);
+  };
+
+  const sideLabel = (rt: boolean, lt: boolean): string => {
+    if (rt && lt) return 'both';
+    return rt ? 'Rt' : 'Lt';
+  };
+
+  // quality별로 묶어서 "Lt L4, both L5 (R>L) pain" 형태 생성
+  const byQual: Record<'pain' | 'tingling', string[]> = { pain: [], tingling: [] };
+  const items = [...map.values()].sort((a, b) => levelOrder(a.derm) - levelOrder(b.derm));
+  for (const it of items) {
+    const both = it.rt && it.lt;
+    const dom = both && dominance ? ` (${dominance})` : '';
+    byQual[it.qual].push(`${sideLabel(it.rt, it.lt)} ${it.derm}${dom}`);
+  }
+
+  const parts: string[] = [];
+  if (byQual.pain.length > 0) parts.push(`${byQual.pain.join(', ')} pain`);
+  if (byQual.tingling.length > 0) parts.push(`${byQual.tingling.join(', ')} tingling`);
+
   let head: string;
-  if (sidesBits.length > 0) {
-    head = sidesBits.join(', ');
+  if (parts.length > 0) {
+    head = parts.join(', ');
+  } else if (noteBits.length > 0) {
+    head = `Radicular pain (${noteBits.join(', ')})`;
   } else {
-    // dermatome 미입력 → side-level quality 폴백 (기본 pain)
+    // dermatome·note 미입력 → side-level quality 폴백
     const qStr = quality?.tingling && !quality?.pain ? 'tingling' : 'pain';
     head = `Radicular ${qStr}`;
   }
@@ -256,11 +286,41 @@ function formatRadicularItem(
 }
 
 /**
- * Physical exam (비정상만). region prefix 없음.
- * 순서: motor weakness → pathologic signs → DTR → sensory → mental
+ * Physical exam을 카테고리별로 묶어서 반환 (#3 가독성 개선).
+ *   - (가) Motor / Sensory / DTR / Path / 기타 분리
+ *   - (나) 양측 동일값은 "both"로 압축 (sensory)
+ *   - 비정상만 포함 (정상은 애초에 빠짐)
  */
-export function buildPhysicalList(regions: ExamRegions): string[] {
+export interface PhysicalGroup {
+  label: string;
+  items: string[];
+  /** motor 등 약화 정도가 심한지(≤3) — 강조용 */
+  severe?: boolean;
+}
+
+export function buildPhysicalGrouped(regions: ExamRegions): PhysicalGroup[] {
+  const flat = buildPhysicalListInternal(regions);
+  const groups: PhysicalGroup[] = [];
+  if (flat.motor.length) groups.push({ label: 'Motor', items: flat.motor, severe: flat.motorSevere });
+  if (flat.path.length) groups.push({ label: 'Path', items: flat.path });
+  if (flat.dtr.length) groups.push({ label: 'DTR', items: flat.dtr });
+  if (flat.sensory.length) groups.push({ label: 'Sensory', items: flat.sensory });
+  if (flat.other.length) groups.push({ label: '기타', items: flat.other });
+  return groups;
+}
+
+interface PhysicalInternal {
+  motor: string[];
+  motorSevere: boolean;
+  path: string[];
+  dtr: string[];
+  sensory: string[];
+  other: string[];
+}
+
+function buildPhysicalListInternal(regions: ExamRegions): PhysicalInternal {
   const motorBits: string[] = [];
+  let motorSevere = false;
   const pathBits: string[] = [];
   const dtrBits: string[] = [];
   const sensoryBits: string[] = [];
@@ -270,15 +330,17 @@ export function buildPhysicalList(regions: ExamRegions): string[] {
     const exam = regions[r];
     if (!exam) continue;
 
-    // Motor weakness — 5/5 아닌 항목만
     const motorObj = (exam as { motor?: Record<string, Bilateral<MotorGrade>> }).motor;
     if (motorObj) {
       for (const [k, v] of Object.entries(motorObj)) {
         const grade = formatMotorBilateral(v);
-        if (grade) motorBits.push(`${k} ${grade}`);
+        if (grade) {
+          motorBits.push(`${k} ${grade}`);
+          // 3 이하 포함 시 severe
+          if (/[0-3]/.test(grade)) motorSevere = true;
+        }
       }
     }
-    // Brain motorUpper/motorLower
     if (r === 'brain') {
       const b = exam as BrainExam;
       const up = formatMotorBilateral(b.motorUpper);
@@ -287,7 +349,6 @@ export function buildPhysicalList(regions: ExamRegions): string[] {
       if (lo) motorBits.push(`Lower ${lo}`);
     }
 
-    // Pathologic signs
     const ps = (exam as { pathologicSigns?: PathologicSigns }).pathologicSigns;
     if (ps) {
       for (const key of Object.keys(ps) as (keyof PathologicSigns)[]) {
@@ -295,7 +356,6 @@ export function buildPhysicalList(regions: ExamRegions): string[] {
       }
     }
 
-    // DTR
     const dtrObj = (exam as { dtr?: unknown }).dtr;
     if (dtrObj) {
       if ('lt' in (dtrObj as object) && 'rt' in (dtrObj as object)) {
@@ -309,7 +369,7 @@ export function buildPhysicalList(regions: ExamRegions): string[] {
       }
     }
 
-    // Sensory — dermatome별 hyper/hypo 표시
+    // Sensory — 양측 동일하면 "both"로 압축 (나)
     const sensoryObj = (exam as { sensory?: unknown }).sensory;
     if (sensoryObj && typeof sensoryObj === 'object') {
       for (const [derm, v] of Object.entries(
@@ -319,17 +379,20 @@ export function buildPhysicalList(regions: ExamRegions): string[] {
         const lt = v.lt ?? 'intact';
         const rt = v.rt ?? 'intact';
         if (lt === 'intact' && rt === 'intact') continue;
-        const sideBits: string[] = [];
-        if (rt && rt !== 'intact') sideBits.push(`Rt ${sensoryLabel(rt)}`);
-        if (lt && lt !== 'intact') sideBits.push(`Lt ${sensoryLabel(lt)}`);
-        sensoryBits.push(`${derm} ${sideBits.join('/')}`);
+        if (rt !== 'intact' && lt !== 'intact' && rt === lt) {
+          // 양측 동일 → both
+          sensoryBits.push(`${derm} both ${sensoryLabel(rt)}`);
+        } else {
+          const sideBits: string[] = [];
+          if (rt && rt !== 'intact') sideBits.push(`Rt ${sensoryLabel(rt)}`);
+          if (lt && lt !== 'intact') sideBits.push(`Lt ${sensoryLabel(lt)}`);
+          sensoryBits.push(`${derm} ${sideBits.join('/')}`);
+        }
       }
     }
 
-    // mental
     const ms = (exam as BrainExam).mentalStatus;
     if (ms && ms !== 'alert') otherBits.push(`Mental: ${ms}`);
-    // Brain의 sensory는 전반적이라 위 sensory bilateral과 형태 다름 — 처리
     if (r === 'brain' && typeof sensoryObj === 'string') {
       if (sensoryObj !== 'intact' && sensoryObj !== null) {
         otherBits.push(`Sensory ${sensoryLabel(sensoryObj as 'hyper' | 'hypo')}`);
@@ -337,9 +400,25 @@ export function buildPhysicalList(regions: ExamRegions): string[] {
     }
   }
 
-  const pathDedup = Array.from(new Set(pathBits));
-  return [...motorBits, ...pathDedup, ...dtrBits, ...sensoryBits, ...otherBits];
+  return {
+    motor: motorBits,
+    motorSevere,
+    path: Array.from(new Set(pathBits)),
+    dtr: dtrBits,
+    sensory: sensoryBits,
+    other: otherBits,
+  };
 }
+
+/**
+ * Physical exam (비정상만). region prefix 없음. (flat — 기존 호환)
+ * 순서: motor weakness → pathologic signs → DTR → sensory → mental
+ */
+export function buildPhysicalList(regions: ExamRegions): string[] {
+  const g = buildPhysicalListInternal(regions);
+  return [...g.motor, ...g.path, ...g.dtr, ...g.sensory, ...g.other];
+}
+
 
 function sensoryLabel(s: 'hyper' | 'intact' | 'hypo' | string): string {
   if (s === 'hyper') return 'hyperesthesia';

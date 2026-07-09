@@ -55,7 +55,8 @@ export interface CervicalExam {
   nuchalVas?: number | null;         // 1~9, null이면 미선택
   radicularPain?: boolean;           // Radicular pain 활성 여부
   radicularVas?: number | null;      // 1~9
-  radicularQuality?: { pain?: boolean; tingling?: boolean }; // 통증/저림
+  radicularQuality?: { pain?: boolean; tingling?: boolean };
+  radicularDominance?: 'R>L' | 'L>R'; // 양측 시 우세측
   mainPain?: 'nuchal' | 'radicular' | null;
   vas?: number;                      // legacy — 호환
   motor?: {
@@ -96,6 +97,7 @@ export interface LumbarExam {
   radicularPain?: boolean;
   radicularVas?: number | null;
   radicularQuality?: { pain?: boolean; tingling?: boolean };
+  radicularDominance?: 'R>L' | 'L>R'; // 양측 시 우세측
   nic?: boolean;
   mainPain?: 'back' | 'radicular' | null;
   vas?: number;  // legacy
