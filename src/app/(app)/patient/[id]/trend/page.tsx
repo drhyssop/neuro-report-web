@@ -115,9 +115,17 @@ export default async function TrendPage({ params }: { params: Promise<{ id: stri
   const labRows = sorted
     .map((e) => ({
       date: e.exam_date.slice(5),
-      labs: (e.labs as { wbc?: number; hb?: number; crp?: number; cr?: number } | undefined) ?? {},
+      labs: (e.labs as { wbc?: number; hb?: number; crp?: number; cr?: number; na?: number; k?: number } | undefined) ?? {},
     }))
-    .filter((r) => r.labs.wbc != null || r.labs.hb != null || r.labs.crp != null || r.labs.cr != null);
+    .filter(
+      (r) =>
+        r.labs.wbc != null ||
+        r.labs.hb != null ||
+        r.labs.crp != null ||
+        r.labs.cr != null ||
+        r.labs.na != null ||
+        r.labs.k != null,
+    );
 
   return (
     <div className="space-y-4">
@@ -164,6 +172,8 @@ export default async function TrendPage({ params }: { params: Promise<{ id: stri
                   <th className="px-2 py-1 text-right">Hb</th>
                   <th className="px-2 py-1 text-right">CRP</th>
                   <th className="px-2 py-1 text-right">Cr</th>
+                  <th className="px-2 py-1 text-right">Na</th>
+                  <th className="px-2 py-1 text-right">K</th>
                 </tr>
               </thead>
               <tbody>
@@ -174,6 +184,8 @@ export default async function TrendPage({ params }: { params: Promise<{ id: stri
                     <td className="px-2 py-1 text-right dark:text-slate-300">{r.labs.hb ?? '-'}</td>
                     <td className="px-2 py-1 text-right dark:text-slate-300">{r.labs.crp ?? '-'}</td>
                     <td className="px-2 py-1 text-right dark:text-slate-300">{r.labs.cr ?? '-'}</td>
+                    <td className="px-2 py-1 text-right dark:text-slate-300">{r.labs.na ?? '-'}</td>
+                    <td className="px-2 py-1 text-right dark:text-slate-300">{r.labs.k ?? '-'}</td>
                   </tr>
                 ))}
               </tbody>

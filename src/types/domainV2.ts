@@ -261,9 +261,11 @@ export interface Labs {
   hb?: number | null;
   crp?: number | null;
   cr?: number | null;
+  na?: number | null;
+  k?: number | null;
 }
 
-/** lab을 "WBC 9000 Hb 9.6 CRP 5.4 Cr 1.0" 형태로 (입력된 항목만) */
+/** lab을 "WBC 9000 Hb 9.6 CRP 5.4 Cr 1.0 Na 140 K 4.0" 형태로 (입력된 항목만) */
 export function formatLabs(l?: Labs | null): string {
   if (!l) return '';
   const bits: string[] = [];
@@ -271,6 +273,8 @@ export function formatLabs(l?: Labs | null): string {
   if (l.hb != null) bits.push(`Hb ${l.hb}`);
   if (l.crp != null) bits.push(`CRP ${l.crp}`);
   if (l.cr != null) bits.push(`Cr ${l.cr}`);
+  if (l.na != null) bits.push(`Na ${l.na}`);
+  if (l.k != null) bits.push(`K ${l.k}`);
   return bits.join(' ');
 }
 
@@ -454,4 +458,16 @@ export function isAdmissionPending(admittedAt?: string | null, today?: string): 
   if (!admittedAt) return false;
   const t = today ?? new Date().toISOString().slice(0, 10);
   return admittedAt > t; // ISO 날짜 문자열은 사전식 비교가 곧 날짜 비교
+}
+
+/**
+ * 회진 누적 메모 — 매일 계속 기억해야 할 항목.
+ * 예: "금요일 전원 예정", "목요일 cxr f/u"
+ * 완료(done) 처리하면 환자일보에서는 숨기되 기록은 남긴다.
+ */
+export interface RoundingNote {
+  id: string;
+  text: string;
+  done?: boolean;
+  created_at: string; // YYYY-MM-DD
 }

@@ -27,6 +27,21 @@ const CHANGE_EXCLUDED_FIELDS = new Set([
   'qualities',
 ]);
 
+/**
+ * "입원 대비" 변화로 인정할 physical 필드들 (region 아래 최상위 키).
+ * 요청: 오늘 physical(motor/sensory/DTR 등)을 실제로 바꿨을 때만 대비를 띄운다.
+ * 증상(pain/VAS/NIC 등)이나 자유메모는 대비로 띄우지 않음 — '오늘 소견'으로 확인.
+ */
+const PHYSICAL_FIELDS = new Set([
+  'motor',
+  'motorUpper',
+  'motorLower',
+  'sensory',
+  'dtr',
+  'pathologicSigns',
+  'mentalStatus',
+]);
+
 function walk(
   path: string,
   prev: unknown,
@@ -35,6 +50,10 @@ function walk(
 ): void {
   const leaf = path.split('.').pop() ?? '';
   if (CHANGE_EXCLUDED_FIELDS.has(leaf)) return;
+
+  // region 바로 아래 키(예: 'lumbar.motor')에서 physical 필드가 아니면 제외
+  const parts = path.split('.');
+  if (parts.length === 2 && !PHYSICAL_FIELDS.has(parts[1])) return;
 
   // 배열(dermatome 목록 등)은 변화감지에서 제외 — 스칼라 필드로 이미 포착됨
   if (Array.isArray(prev) || Array.isArray(next)) return;

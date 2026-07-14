@@ -135,12 +135,14 @@ export function DailyExtras({
 
       {/* Lab — 나갔을 때만 입력 (WBC/Hb/CRP/Cr) */}
       <Section title="Lab (나갔을 때 입력)">
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
           {([
             ['wbc', 'WBC'],
             ['hb', 'Hb'],
             ['crp', 'CRP'],
             ['cr', 'Cr'],
+            ['na', 'Na'],
+            ['k', 'K'],
           ] as const).map(([key, label]) => (
             <div key={key}>
               <label className="text-[10px] text-slate-500 dark:text-slate-400">{label}</label>

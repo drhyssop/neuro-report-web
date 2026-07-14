@@ -296,6 +296,18 @@ function PatientBlock({ r }: { r: PatientReportData }) {
           </Row>
         )}
 
+        {r.roundingNotes.length > 0 && (
+          <Row label="회진 메모">
+            <span className="inline-flex flex-col gap-0.5">
+              {r.roundingNotes.map((n, i) => (
+                <span key={i} className="text-slate-700 dark:text-slate-200">
+                  • {n}
+                </span>
+              ))}
+            </span>
+          </Row>
+        )}
+
         {r.bmd && (
           <Row label="BMD">
             <span className="text-slate-700 dark:text-slate-200">{r.bmd}</span>
@@ -311,6 +323,12 @@ function PatientBlock({ r }: { r: PatientReportData }) {
         {r.labsText && (
           <Row label="lab">
             <span className="font-medium text-slate-700 dark:text-slate-200">{r.labsText}</span>
+          </Row>
+        )}
+
+        {r.crpTrend && (
+          <Row label="CRP 추이">
+            <span className="text-slate-600 dark:text-slate-300">{r.crpTrend}</span>
           </Row>
         )}
       </div>

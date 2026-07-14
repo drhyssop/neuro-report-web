@@ -15,6 +15,7 @@ import type {
   ConsultReferral,
   Medications,
   Labs,
+  RoundingNote,
 } from '@/types/domainV2';
 import { detectChanges, describeChanges } from './diffDetector';
 import type { ExamRegions } from '@/types/domain';
@@ -73,6 +74,8 @@ export interface PatientReportData {
   bmd: string | null;
   medicationsText: string;
   labsText: string;
+  crpTrend: string;
+  roundingNotes: string[];
 }
 
 interface PatientRow {
@@ -95,6 +98,7 @@ interface PatientRow {
   antibiotics_log?: unknown;
   drains_log?: unknown;
   consults_log?: unknown;
+  rounding_notes?: unknown;
   baseline_regions?: unknown;
 }
 
@@ -222,6 +226,10 @@ export function collectReports(
       bmd: (p.bmd as string | null) ?? null,
       medicationsText: formatMedications(p.medications as Medications | null),
       labsText: formatLabs((latestExam?.labs as Labs | undefined) ?? null),
+      crpTrend: buildCrpTrend(exams),
+      roundingNotes: ((p.rounding_notes as RoundingNote[] | null) ?? [])
+        .filter((n) => !n.done)
+        .map((n) => n.text),
     };
   });
 }
@@ -305,11 +313,38 @@ export function reportSecondLine(r: PatientReportData): string {
  *   대기: "CM(5/26 의뢰): 폐기능 저하 — 대기중"
  *   회신: "CM(5/26→5/27): 폐기능 저하 → 수술 가능"
  */
+/**
+ * CRP 추이 — "5.4 (7/8), 7.5 (7/14)" 형태 (최근 5개, 날짜순).
+ * exams는 exam_date 내림차순으로 들어온다.
+ */
+function buildCrpTrend(exams: Record<string, unknown>[]): string {
+  const pts: { date: string; crp: number }[] = [];
+  for (const e of exams) {
+    const labs = e.labs as Labs | undefined;
+    const crp = labs?.crp;
+    if (crp == null) continue;
+    pts.push({ date: e.exam_date as string, crp });
+  }
+  if (pts.length === 0) return '';
+  // exams는 최신순 → 최근 5개 자르고 날짜 오름차순으로 뒤집기
+  const recent = pts.slice(0, 5).reverse();
+  return recent
+    .map((p) => {
+      const [, m, d] = p.date.split('-');
+      return `${p.crp} (${parseInt(m, 10)}/${parseInt(d, 10)})`;
+    })
+    .join(', ');
+}
+
+/**
+ * 협진 표시 — 답변이 있으면 "답변 (협진이유)", 대기중이면 "이유 — 대기중".
+ * 예: "quetiapine 증량 후 목요일 재협의 (irritable)"
+ */
 export function formatConsultLine(c: ConsultReferral): string {
   const d = c.date.slice(5);
   if (c.answer) {
     const ad = c.answered_at ? c.answered_at.slice(5) : '';
-    return `${c.dept}(${d}→${ad}): ${c.content} → ${c.answer}`;
+    return `${c.dept}(${d}→${ad}): ${c.answer} (${c.content})`;
   }
   return `${c.dept}(${d} 의뢰): ${c.content} — 대기중`;
 }

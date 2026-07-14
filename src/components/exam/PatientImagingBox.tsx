@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { ImagingLogEntry } from '@/types/domainV2';
@@ -140,7 +140,12 @@ export function PatientImagingBox({ patientId, imagingLog }: Props) {
                     {e.kind === 'preop' ? '수술 전' : 'F/U'}
                   </span>
                   <span className="font-medium dark:text-slate-100">{e.modality}</span>
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400">{e.date}</span>
+                  <input
+                    type="date"
+                    value={e.date}
+                    onChange={(ev) => ev.target.value && update(e.idx, { date: ev.target.value })}
+                    className="rounded border border-slate-300 bg-white px-1 py-0.5 text-[10px] text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                  />
                   {e.kind === 'followup' && (
                     <button
                       type="button"
@@ -168,17 +173,76 @@ export function PatientImagingBox({ patientId, imagingLog }: Props) {
                   삭제
                 </button>
               </div>
-              <textarea
-                value={e.findings ?? ''}
-                onChange={(ev) => update(e.idx, { findings: ev.target.value || undefined })}
-                placeholder="소견 (자유 입력)"
-                rows={1}
-                className={`${inputCls} mt-1 w-full`}
+              <FindingsEditor
+                key={`f-${e.idx}`}
+                initial={e.findings ?? ''}
+                onSave={(v) => update(e.idx, { findings: v || undefined })}
               />
             </div>
           ))
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * 영상 소견 편집기 — 로컬 state로 입력받고 디바운스로 저장.
+ * (props에 직접 묶으면 저장→refresh 때문에 타이핑이 튕겨서 수정이 불가능했음)
+ */
+function FindingsEditor({
+  initial,
+  onSave,
+}: {
+  initial: string;
+  onSave: (v: string) => void;
+}) {
+  const [text, setText] = useState(initial);
+  const timer = useRef<NodeJS.Timeout | null>(null);
+  const textRef = useRef(text);
+  textRef.current = text;
+
+  // 외부(서버) 값이 바뀌면 동기화 — 단, 편집 중이 아닐 때만
+  useEffect(() => {
+    setText(initial);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initial]);
+
+  function change(v: string) {
+    setText(v);
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      onSave(v);
+      timer.current = null;
+    }, 700);
+  }
+
+  // 포커스 잃으면 즉시 저장, unmount 시에도 미저장분 저장
+  function flush() {
+    if (timer.current) {
+      clearTimeout(timer.current);
+      timer.current = null;
+      onSave(textRef.current);
+    }
+  }
+  useEffect(() => {
+    return () => {
+      if (timer.current) {
+        clearTimeout(timer.current);
+        onSave(textRef.current);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <textarea
+      value={text}
+      onChange={(ev) => change(ev.target.value)}
+      onBlur={flush}
+      placeholder="소견 (자유 입력 · 수정 가능)"
+      rows={2}
+      className={`${inputCls} mt-1 w-full`}
+    />
   );
 }

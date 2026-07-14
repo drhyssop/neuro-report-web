@@ -71,9 +71,11 @@ export function BoardReportClient({ reports, date }: Props) {
       if (r.dailyNote) lines.push(`  오늘 소견: ${r.dailyNote.replace(/\n/g, ' ')}`);
       if (r.patientMemo) lines.push(`  메모: ${r.patientMemo.replace(/\n/g, ' ')}`);
       for (const c of r.consults) lines.push(`  협진: ${formatConsultLine(c)}`);
+      for (const n of r.roundingNotes) lines.push(`  회진 메모: ${n}`);
       if (r.bmd) lines.push(`  BMD: ${r.bmd}`);
       if (r.medicationsText) lines.push(`  복용약: ${r.medicationsText}`);
       if (r.labsText) lines.push(`  lab: ${r.labsText}`);
+      if (r.crpTrend) lines.push(`  CRP 추이: ${r.crpTrend}`);
       lines.push('');
     }
     return lines.join('\n').trim();

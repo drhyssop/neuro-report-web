@@ -157,9 +157,11 @@ export function PrintClient({ sections, reports, date }: Props) {
         if (r.dailyNote) lines.push({ text: `오늘 소견: ${r.dailyNote.replace(/\n/g, ' ')}` });
         if (r.patientMemo) lines.push({ text: `메모: ${r.patientMemo.replace(/\n/g, ' ')}` });
         for (const c of r.consults) lines.push({ text: `협진: ${formatConsultLine(c)}` });
+        for (const n of r.roundingNotes) lines.push({ text: `회진 메모: ${n}` });
         if (r.bmd) lines.push({ text: `BMD: ${r.bmd}` });
         if (r.medicationsText) lines.push({ text: `복용약: ${r.medicationsText}` });
         if (r.labsText) lines.push({ text: `lab: ${r.labsText}` });
+        if (r.crpTrend) lines.push({ text: `CRP 추이: ${r.crpTrend}` });
 
         for (const line of lines) {
           children.push(

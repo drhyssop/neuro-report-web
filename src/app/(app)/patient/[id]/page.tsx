@@ -8,6 +8,7 @@ import { BaselineSection } from '@/components/exam/BaselineSection';
 import { PatientAntibioticsBox } from '@/components/exam/PatientAntibioticsBox';
 import { PatientImagingBox } from '@/components/exam/PatientImagingBox';
 import { PatientConsultBox } from '@/components/exam/PatientConsultBox';
+import { PatientRoundingNotesBox } from '@/components/exam/PatientRoundingNotesBox';
 import { PatientMedicationsBox } from '@/components/exam/PatientMedicationsBox';
 import { DischargeButton } from '@/components/patient/DischargeButton';
 import { DeletePatientButton } from '@/components/patient/DeletePatientButton';
@@ -123,6 +124,12 @@ export default async function PatientDetailPage({
           consultsLog={(patient.consults_log as ConsultReferral[] | null) ?? []}
         />
       </div>
+
+      {/* 회진 누적 메모 — 협진 아래, 기존 증상 위 */}
+      <PatientRoundingNotesBox
+        patientId={id}
+        notes={(patient.rounding_notes as import('@/types/domainV2').RoundingNote[] | null) ?? []}
+      />
 
       {/* 기존 증상 (입원 시 baseline) — 항상 보임, 편집 가능 */}
       <BaselineSection
