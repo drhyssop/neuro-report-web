@@ -50,6 +50,7 @@ export const patientCreateSchema = z.object({
   surgery_name: z.string().max(200).optional(),
   surgery_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   surgery_type: z.enum(['general', 'local']).optional(),
+  professor: z.string().max(4).optional(),
   bmd: z.string().max(20).optional(),
   is_consult: z.boolean().optional(),
   consult_dept: z.string().max(10).optional(),

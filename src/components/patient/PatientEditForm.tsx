@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { patientRepository } from '@/lib/repositories/patientRepository';
 import { patientUpdateSchema, type PatientCreate } from '@/lib/schemas/patient';
 import { PatientFormFields } from './PatientFormFields';
+import { useProfessors } from '@/lib/hooks/useProfessors';
 
 interface Props {
   patientId: string;
@@ -14,6 +15,7 @@ interface Props {
 
 export function PatientEditForm({ patientId, initial }: Props) {
   const router = useRouter();
+  const professors = useProfessors();
   const [draft, setDraft] = useState<Partial<PatientCreate>>({
     alias: initial.alias as string,
     diagnosis: (initial.diagnosis as string) || undefined,
@@ -27,6 +29,7 @@ export function PatientEditForm({ patientId, initial }: Props) {
     surgery_name: (initial.surgery_name as string) || undefined,
     surgery_date: (initial.surgery_date as string) || undefined,
     surgery_type: (initial.surgery_type as 'general' | 'local') || undefined,
+    professor: (initial.professor as string) || undefined,
     bmd: (initial.bmd as string) || undefined,
     is_consult: (initial.is_consult as boolean) ?? false,
     consult_dept: (initial.consult_dept as string) || undefined,
@@ -81,7 +84,7 @@ export function PatientEditForm({ patientId, initial }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <PatientFormFields value={draft} onChange={setDraft} />
+      <PatientFormFields value={draft} onChange={setDraft} professors={professors} />
 
       {error && (
         <div className="rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">

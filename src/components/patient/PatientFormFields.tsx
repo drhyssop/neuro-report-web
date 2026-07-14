@@ -7,12 +7,13 @@ import { cn } from '@/lib/utils/cn';
 interface Props {
   value: Partial<PatientCreate>;
   onChange: (next: Partial<PatientCreate>) => void;
+  professors?: string[];
 }
 
 const inputCls =
   'w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500';
 
-export function PatientFormFields({ value, onChange }: Props) {
+export function PatientFormFields({ value, onChange, professors }: Props) {
   function patch(p: Partial<PatientCreate>) {
     onChange({ ...value, ...p });
   }
@@ -60,6 +61,20 @@ export function PatientFormFields({ value, onChange }: Props) {
               <option value="">선택…</option>
               <option value="M">M</option>
               <option value="F">F</option>
+            </select>
+          </Field>
+          <Field label="담당 교수">
+            <select
+              value={value.professor ?? ''}
+              onChange={(e) => patch({ professor: e.target.value || undefined })}
+              className={inputCls}
+            >
+              <option value="">미지정</option>
+              {(professors ?? []).map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
             </select>
           </Field>
           <Field label="병동 (예: 1013, 926, sb)">

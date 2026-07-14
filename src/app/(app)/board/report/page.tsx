@@ -1,6 +1,7 @@
 import { todayKST } from '@/lib/utils/date';
 import { createClient } from '@/lib/supabase/server';
 import { patientRepository } from '@/lib/repositories/patientRepository';
+import { getSelectedProfessor, filterByProfessor } from '@/lib/services/professor';
 import { examRepository } from '@/lib/repositories/examRepository';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
@@ -17,7 +18,9 @@ export default async function BoardReportPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  const patients = await patientRepository.listActive(supabase);
+  const allPatients = await patientRepository.listActive(supabase);
+  const selectedProfessor = await getSelectedProfessor();
+  const patients = filterByProfessor(allPatients as { professor?: string | null }[], selectedProfessor) as typeof allPatients;
   const today = todayKST();
 
   // 입원 안 한 수술 예정자(입원일 미래) 제외 — 환자일보는 입원 중인 환자만

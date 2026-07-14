@@ -1,6 +1,7 @@
 import { todayDateKST } from '@/lib/utils/date';
 import { createClient } from '@/lib/supabase/server';
 import { patientRepository } from '@/lib/repositories/patientRepository';
+import { getSelectedProfessor, filterByProfessor } from '@/lib/services/professor';
 import { holidayRepository } from '@/lib/repositories/holidayRepository';
 import { examRepository } from '@/lib/repositories/examRepository';
 import { redirect } from 'next/navigation';
@@ -19,7 +20,9 @@ export default async function BoardPrintPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  const patients = await patientRepository.listActive(supabase);
+  const allPatients = await patientRepository.listActive(supabase);
+  const selectedProfessor = await getSelectedProfessor();
+  const patients = filterByProfessor(allPatients as { professor?: string | null }[], selectedProfessor) as typeof allPatients;
   const holidaySet = await holidayRepository.loadSet(supabase);
   const todayDate = todayDateKST();
   const today = todayDate.toISOString().slice(0, 10);

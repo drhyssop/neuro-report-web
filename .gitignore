@@ -10,3 +10,6 @@ build/
 *.tsbuildinfo
 next-env.d.ts
 .vercel
+supabase-images.tar
+*.tar
+supabase/snippets/

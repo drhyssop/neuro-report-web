@@ -6,9 +6,11 @@ import { createClient } from '@/lib/supabase/client';
 import { patientRepository } from '@/lib/repositories/patientRepository';
 import { patientCreateSchema, type PatientCreate } from '@/lib/schemas/patient';
 import { PatientFormFields } from '@/components/patient/PatientFormFields';
+import { useProfessors } from '@/lib/hooks/useProfessors';
 
 export default function NewPatientPage() {
   const router = useRouter();
+  const professors = useProfessors();
   const [draft, setDraft] = useState<Partial<PatientCreate>>({
     admitted_at: new Date().toISOString().slice(0, 10),
   });
@@ -68,7 +70,7 @@ export default function NewPatientPage() {
         ⚠️ 실명, 주민번호, 실제 차트번호는 입력하지 마세요. 본인이 알아볼 수 있는 별칭을 사용하세요.
       </p>
 
-      <PatientFormFields value={draft} onChange={setDraft} />
+      <PatientFormFields value={draft} onChange={setDraft} professors={professors} />
 
       {error && (
         <div className="rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">

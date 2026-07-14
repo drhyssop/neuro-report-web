@@ -2,6 +2,8 @@ import { todayKST } from '@/lib/utils/date';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { patientRepository } from '@/lib/repositories/patientRepository';
+import { getSelectedProfessor, filterByProfessor } from '@/lib/services/professor';
+import { ProfessorSwitcher } from '@/components/board/ProfessorSwitcher';
 import { examRepository } from '@/lib/repositories/examRepository';
 import { BoardRealtime } from '@/components/patient/BoardRealtime';
 import {
@@ -30,6 +32,7 @@ interface PatientRow {
   surgery_date: string | null;
   surgery_name: string | null;
   surgery_type: string | null;
+  professor: string | null;
   bed_seat: number | null;
   is_consult: boolean | null;
   consult_dept: string | null;
@@ -43,7 +46,13 @@ export default async function BoardPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const patients = await patientRepository.listActive(supabase);
+  const allPatients = await patientRepository.listActive(supabase);
+  const selectedProfessor = await getSelectedProfessor();
+  const { data: professorRows } = await supabase
+    .from('professors')
+    .select('initial, name')
+    .order('sort_order');
+  const patients = filterByProfessor(allPatients as { professor?: string | null }[], selectedProfessor) as typeof allPatients;
   const today = todayKST();
 
   // 최근 exam을 한 번의 쿼리로 배치 조회 (N+1 제거)
@@ -97,7 +106,11 @@ export default async function BoardPage() {
             오늘 회진 {admittedUpdatedCount} / {admitted.length}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <ProfessorSwitcher
+            professors={(professorRows as { initial: string; name?: string | null }[] | null) ?? []}
+            selected={selectedProfessor}
+          />
           <Link
             href="/board/print"
             className="rounded-md bg-slate-900 px-3 py-1.5 text-xs text-white dark:bg-slate-100 dark:text-slate-900"
@@ -109,6 +122,12 @@ export default async function BoardPage() {
             className="rounded-md border border-slate-300 px-3 py-1.5 text-xs dark:border-slate-700 dark:text-slate-300"
           >
             전체 환자일보
+          </Link>
+          <Link
+            href="/settings/transfer"
+            className="rounded-md border border-slate-300 px-3 py-1.5 text-xs dark:border-slate-700 dark:text-slate-300"
+          >
+            데이터 이전
           </Link>
           <Link
             href="/settings/holidays"
