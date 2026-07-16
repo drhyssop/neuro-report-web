@@ -206,60 +206,7 @@ function PatientBlock({ r }: { r: PatientReportData }) {
           </Row>
         )}
 
-        {/* 입원시 기존 증상 / motor — 매일 표시 */}
-        <Row label="입원시 증상">
-          {r.baselineSymptoms.length > 0 ? (
-            r.baselineSymptoms.join(', ')
-          ) : (
-            <span className="text-slate-400">특이사항 없음</span>
-          )}
-        </Row>
-        <Row label="입원시 Physical">
-          {r.baselinePhysicalGroups.length === 0 ? (
-            <span className="text-emerald-600 dark:text-emerald-400">intact</span>
-          ) : (
-            <span className="inline-flex flex-col gap-0.5">
-              {r.baselinePhysicalGroups.map((g) => (
-                <span key={g.label}>
-                  <span className="text-slate-400 dark:text-slate-500">{g.label}: </span>
-                  <span
-                    className={
-                      g.severe
-                        ? 'font-semibold text-red-600 dark:text-red-400'
-                        : 'text-amber-700 dark:text-amber-400'
-                    }
-                  >
-                    {g.items.join(', ')}
-                  </span>
-                </span>
-              ))}
-            </span>
-          )}
-        </Row>
-
-        {/* 입원(baseline) 대비 변화 — 오늘 입력이 있어 실제 변화가 있을 때만 표시.
-            미확인/변화없음은 굳이 띄우지 않음 (baseline은 위에 이미 보임). */}
-        {r.reviewed && changeChips.length > 0 && (
-          <Row label="입원 대비">
-            <span className="inline-flex flex-wrap items-center gap-1">
-              {changeChips.map((c, i) => (
-                <span
-                  key={i}
-                  className={
-                    c.kind === 'up'
-                      ? 'rounded bg-emerald-50 px-1.5 py-0.5 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
-                      : c.kind === 'down'
-                        ? 'rounded bg-red-50 px-1.5 py-0.5 text-red-700 dark:bg-red-950 dark:text-red-300'
-                        : 'rounded bg-slate-100 px-1.5 py-0.5 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
-                  }
-                >
-                  {c.kind === 'up' ? '▲ ' : c.kind === 'down' ? '▼ ' : ''}
-                  {c.text}
-                </span>
-              ))}
-            </span>
-          </Row>
-        )}
+        {/* 입원시 증상/Physical/변화 → 맨 아래로 이동 (매일 보는 정보 아님) */}
 
         {abxText && <Row label="항생제">{abxText}</Row>}
 
@@ -279,6 +226,16 @@ function PatientBlock({ r }: { r: PatientReportData }) {
                   )}
                   <span className="text-slate-500 dark:text-slate-400"> · {c.content}</span>
                 </span>
+              ))}
+            </span>
+          </Row>
+        )}
+
+        {r.imaging.length > 0 && (
+          <Row label="영상">
+            <span className="inline-flex flex-col gap-0.5">
+              {r.imaging.map((img, i) => (
+                <span key={i} className="text-slate-600 dark:text-slate-300">{img}</span>
               ))}
             </span>
           </Row>
@@ -328,7 +285,17 @@ function PatientBlock({ r }: { r: PatientReportData }) {
 
         {r.crpTrend && (
           <Row label="CRP 추이">
-            <span className="text-slate-600 dark:text-slate-300">{r.crpTrend}</span>
+            <span className="text-slate-600 dark:text-slate-300">
+              {r.crpTrendPoints && r.crpTrendPoints.length > 0
+                ? r.crpTrendPoints.map((pt, i) => (
+                    <span key={i}>
+                      {i > 0 && ', '}
+                      <span className="font-bold">{pt.crp}</span>
+                      <span className="text-[9px] text-slate-400"> {pt.label}</span>
+                    </span>
+                  ))
+                : r.crpTrend}
+            </span>
           </Row>
         )}
       </div>

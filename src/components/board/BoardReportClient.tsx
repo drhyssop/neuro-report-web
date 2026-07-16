@@ -46,6 +46,21 @@ export function BoardReportClient({ reports, date }: Props) {
       }
       if (r.drainsActive > 0) lines.push(`  Drain: ${r.drainsText || `활성 ${r.drainsActive}개`}`);
       if (r.fever) lines.push(`  발열: ${r.feverTemp ? `${r.feverTemp}°C` : '있음'}`);
+      if (r.ongoingAntibiotics.length > 0) {
+        lines.push(
+          `  항생제: ${r.ongoingAntibiotics.map((a) => `${a.short} ${a.days}d (${a.startedAt.slice(5)}~)`).join(', ')}`,
+        );
+      }
+      if (r.dailyNote) lines.push(`  오늘 소견: ${r.dailyNote.replace(/\n/g, ' ')}`);
+      if (r.patientMemo) lines.push(`  메모: ${r.patientMemo.replace(/\n/g, ' ')}`);
+      for (const c of r.consults) lines.push(`  협진: ${formatConsultLine(c)}`);
+      for (const img of r.imaging) lines.push(`  영상: ${img}`);
+      for (const n of r.roundingNotes) lines.push(`  회진 메모: ${n}`);
+      if (r.bmd) lines.push(`  BMD: ${r.bmd}`);
+      if (r.medicationsText) lines.push(`  복용약: ${r.medicationsText}`);
+      if (r.labsText) lines.push(`  lab: ${r.labsText}`);
+      if (r.crpTrend) lines.push(`  CRP 추이: ${r.crpTrend}`);
+      // ── 매일 보는 정보 아님: 입원시 증상/Physical/변화는 맨 아래 ──
       lines.push(
         `  입원시 증상: ${r.baselineSymptoms.length > 0 ? r.baselineSymptoms.join(', ') : '특이사항 없음'}`,
       );
@@ -63,19 +78,6 @@ export function BoardReportClient({ reports, date }: Props) {
         for (const t of r.changeBits.other) cps.push(t);
         if (cps.length > 0) lines.push(`  입원 대비: ${cps.join(', ')}`);
       }
-      if (r.ongoingAntibiotics.length > 0) {
-        lines.push(
-          `  항생제: ${r.ongoingAntibiotics.map((a) => `${a.short} ${a.days}d (${a.startedAt.slice(5)}~)`).join(', ')}`,
-        );
-      }
-      if (r.dailyNote) lines.push(`  오늘 소견: ${r.dailyNote.replace(/\n/g, ' ')}`);
-      if (r.patientMemo) lines.push(`  메모: ${r.patientMemo.replace(/\n/g, ' ')}`);
-      for (const c of r.consults) lines.push(`  협진: ${formatConsultLine(c)}`);
-      for (const n of r.roundingNotes) lines.push(`  회진 메모: ${n}`);
-      if (r.bmd) lines.push(`  BMD: ${r.bmd}`);
-      if (r.medicationsText) lines.push(`  복용약: ${r.medicationsText}`);
-      if (r.labsText) lines.push(`  lab: ${r.labsText}`);
-      if (r.crpTrend) lines.push(`  CRP 추이: ${r.crpTrend}`);
       lines.push('');
     }
     return lines.join('\n').trim();

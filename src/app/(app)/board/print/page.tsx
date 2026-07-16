@@ -1,4 +1,4 @@
-import { todayDateKST } from '@/lib/utils/date';
+import { todayDateKST, dateToStr } from '@/lib/utils/date';
 import { createClient } from '@/lib/supabase/server';
 import { patientRepository } from '@/lib/repositories/patientRepository';
 import { getSelectedProfessor, filterByProfessor } from '@/lib/services/professor';
@@ -25,7 +25,7 @@ export default async function BoardPrintPage() {
   const patients = filterByProfessor(allPatients as { professor?: string | null }[], selectedProfessor) as typeof allPatients;
   const holidaySet = await holidayRepository.loadSet(supabase);
   const todayDate = todayDateKST();
-  const today = todayDate.toISOString().slice(0, 10);
+  const today = dateToStr(todayDate);
 
   // 최근 exam을 한 번의 쿼리로 배치 조회 (N+1 제거). 환자별 최근 7건만 사용.
   const recentByPatient = await examRepository.findRecentForPatients(

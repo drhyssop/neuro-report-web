@@ -364,7 +364,7 @@ function buildPhysicalListInternal(regions: ExamRegions): PhysicalInternal {
       } else {
         for (const [k, v] of Object.entries(dtrObj as Record<string, Bilateral<DtrGrade>>)) {
           const g = formatDtrBilateral(v);
-          if (g) dtrBits.push(`${k} ${g}`);
+          if (g) dtrBits.push(`DTR ${k} ${g}`);
         }
       }
     }

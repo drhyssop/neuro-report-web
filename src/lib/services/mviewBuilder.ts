@@ -8,6 +8,7 @@ import type { ImagingLogEntry, AntibioticEntry } from '@/types/domainV2';
 import type { ExamRegions } from '@/types/domain';
 import { buildSymptomList, buildPhysicalList } from '@/lib/services/examFormatters';
 import { lookbackWindow, lookaheadWindow } from '@/lib/services/holidays';
+import { dateToStr } from '@/lib/utils/date';
 
 export interface MViewPatient {
   patientId: string;
@@ -87,7 +88,7 @@ function imgDateRelative(date: string, todayDate: Date): string {
  *  - F/U:          "X-ray(f/u): 소견 (오늘/어제/2d 전)"  (상대 날짜)
  *  - 소견 없으면 콜론 생략: "MRI (26.6.23)"
  */
-function formatImaging(
+export function formatImaging(
   e: ImagingLogEntry,
   todayDate: Date,
 ): string {
@@ -179,7 +180,7 @@ export function buildMViewSections(
   todayDate: Date,
   holidaySet: Set<string> = new Set(),
 ): MViewSection[] {
-  const today = todayDate.toISOString().slice(0, 10);
+  const today = dateToStr(todayDate);
 
   // 공휴일/주말을 건너뛴 회진 창
   const lookback = lookbackWindow(todayDate, holidaySet); // drain 제거 / f/u 검사

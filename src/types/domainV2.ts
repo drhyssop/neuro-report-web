@@ -275,7 +275,7 @@ export function formatLabs(l?: Labs | null): string {
   if (l.cr != null) bits.push(`Cr ${l.cr}`);
   if (l.na != null) bits.push(`Na ${l.na}`);
   if (l.k != null) bits.push(`K ${l.k}`);
-  return bits.join(' ');
+  return bits.join(' / ');
 }
 
 // ===== 회진 정렬 룰 =====
@@ -456,7 +456,7 @@ export const MVIEW_SUMMARY =
  */
 export function isAdmissionPending(admittedAt?: string | null, today?: string): boolean {
   if (!admittedAt) return false;
-  const t = today ?? new Date().toISOString().slice(0, 10);
+  const t = today ?? new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
   return admittedAt > t; // ISO 날짜 문자열은 사전식 비교가 곧 날짜 비교
 }
 

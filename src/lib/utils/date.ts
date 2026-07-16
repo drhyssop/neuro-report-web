@@ -18,3 +18,28 @@ export function todayKST(): string {
 export function todayDateKST(): Date {
   return new Date(todayKST() + 'T00:00:00');
 }
+
+/**
+ * Date → 'YYYY-MM-DD' (로컬 필드값 기준, KST 안전).
+ * todayDateKST()가 만든 Date는 로컬 자정이므로 getFullYear/Month/Date로 뽑아야
+ * toISOString()의 UTC 변환(하루 밀림)을 피한다.
+ */
+export function dateToStr(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/**
+ * 입력칸 기본값용 '오늘' (YYYY-MM-DD).
+ * 브라우저 로컬 시간 기준 날짜 파트를 쓴다 (toISOString의 UTC 밀림 방지).
+ * 클라이언트 컴포넌트에서 new Date().toISOString().slice(0,10) 대신 사용.
+ */
+export function localToday(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}

@@ -120,7 +120,7 @@ export function PrintClient({ sections, reports, date }: Props) {
         );
 
         // 세부 라인들 ({text, bold?})
-        const lines: { text: string; bold?: boolean }[] = [];
+        const lines: { text: string; bold?: boolean; crp?: { crp: number; label: string }[] }[] = [];
         if (r.surgeryName) {
           if (r.surgeryStatus === 'done' && r.pod != null) {
             const pl = r.pod === 0 ? 'POD #0 (오늘)' : r.pod === 1 ? 'POD #1 (어제)' : `POD #${r.pod}`;
@@ -132,6 +132,21 @@ export function PrintClient({ sections, reports, date }: Props) {
         if (r.drainsActive > 0)
           lines.push({ text: `Drain: ${r.drainsText || `활성 ${r.drainsActive}개`}`, bold: true });
         if (r.fever) lines.push({ text: `발열: ${r.feverTemp ? `${r.feverTemp}°C` : '있음'}` });
+        if (r.ongoingAntibiotics.length > 0) {
+          lines.push({
+            text: `항생제: ${r.ongoingAntibiotics.map((a) => `${a.short} ${a.days}d (${a.startedAt.slice(5)}~)`).join(', ')}`,
+          });
+        }
+        if (r.dailyNote) lines.push({ text: `오늘 소견: ${r.dailyNote.replace(/\n/g, ' ')}` });
+        if (r.patientMemo) lines.push({ text: `메모: ${r.patientMemo.replace(/\n/g, ' ')}` });
+        for (const c of r.consults) lines.push({ text: `협진: ${formatConsultLine(c)}` });
+        for (const img of r.imaging) lines.push({ text: `영상: ${img}` });
+        for (const n of r.roundingNotes) lines.push({ text: `회진 메모: ${n}` });
+        if (r.bmd) lines.push({ text: `BMD: ${r.bmd}` });
+        if (r.medicationsText) lines.push({ text: `복용약: ${r.medicationsText}` });
+        if (r.labsText) lines.push({ text: `lab: ${r.labsText}` });
+        if (r.crpTrend) lines.push({ text: `CRP 추이: ${r.crpTrend}`, crp: r.crpTrendPoints });
+        // ── 매일 보는 정보 아님: 입원시 증상/Physical/변화는 맨 아래 ──
         lines.push({
           text: `입원시 증상: ${r.baselineSymptoms.length > 0 ? r.baselineSymptoms.join(', ') : '특이사항 없음'}`,
         });
@@ -149,24 +164,21 @@ export function PrintClient({ sections, reports, date }: Props) {
           for (const t of r.changeBits.other) cps.push(t);
           if (cps.length > 0) lines.push({ text: `입원 대비: ${cps.join(', ')}` });
         }
-        if (r.ongoingAntibiotics.length > 0) {
-          lines.push({
-            text: `항생제: ${r.ongoingAntibiotics.map((a) => `${a.short} ${a.days}d (${a.startedAt.slice(5)}~)`).join(', ')}`,
-          });
-        }
-        if (r.dailyNote) lines.push({ text: `오늘 소견: ${r.dailyNote.replace(/\n/g, ' ')}` });
-        if (r.patientMemo) lines.push({ text: `메모: ${r.patientMemo.replace(/\n/g, ' ')}` });
-        for (const c of r.consults) lines.push({ text: `협진: ${formatConsultLine(c)}` });
-        for (const n of r.roundingNotes) lines.push({ text: `회진 메모: ${n}` });
-        if (r.bmd) lines.push({ text: `BMD: ${r.bmd}` });
-        if (r.medicationsText) lines.push({ text: `복용약: ${r.medicationsText}` });
-        if (r.labsText) lines.push({ text: `lab: ${r.labsText}` });
-        if (r.crpTrend) lines.push({ text: `CRP 추이: ${r.crpTrend}` });
 
         for (const line of lines) {
-          children.push(
-            new Paragraph({ children: [new TextRun({ text: `    ${line.text}`, bold: line.bold })] }),
-          );
+          if (line.crp && line.crp.length > 0) {
+            const runs: TextRun[] = [new TextRun({ text: '    CRP 추이: ' })];
+            line.crp.forEach((pt, i) => {
+              if (i > 0) runs.push(new TextRun({ text: ', ' }));
+              runs.push(new TextRun({ text: String(pt.crp), bold: true }));
+              runs.push(new TextRun({ text: ` ${pt.label}`, size: 16 })); // 8pt (half-points)
+            });
+            children.push(new Paragraph({ children: runs }));
+          } else {
+            children.push(
+              new Paragraph({ children: [new TextRun({ text: `    ${line.text}`, bold: line.bold })] }),
+            );
+          }
         }
         children.push(new Paragraph({ text: '' }));
       });

@@ -16,8 +16,11 @@ import type {
   Medications,
   Labs,
   RoundingNote,
+  ImagingLogEntry,
 } from '@/types/domainV2';
 import { detectChanges, describeChanges } from './diffDetector';
+import { formatImaging } from './mviewBuilder';
+import { dateToStr } from '@/lib/utils/date';
 import type { ExamRegions } from '@/types/domain';
 import {
   formatDrainsLog,
@@ -70,11 +73,14 @@ export interface PatientReportData {
   dailyNote: string | null;
   // 타과 협진 의뢰 (날짜순 desc)
   consults: ConsultReferral[];
+  // 영상검사 기록 (협진처럼 일보에 표시)
+  imaging: string[];
   // 참고 정보 추가
   bmd: string | null;
   medicationsText: string;
   labsText: string;
   crpTrend: string;
+  crpTrendPoints: { crp: number; label: string }[];
   roundingNotes: string[];
 }
 
@@ -99,6 +105,7 @@ interface PatientRow {
   drains_log?: unknown;
   consults_log?: unknown;
   rounding_notes?: unknown;
+  imaging_log?: unknown;
   baseline_regions?: unknown;
 }
 
@@ -142,7 +149,7 @@ export function collectReports(
     const drainsActive = drainsLog.filter((d) => !d.ended_at).length;
 
     // 증상 변화 — 오늘 exam이 있을 때만 (latest가 오늘자) 의미가 있다.
-    const todayStr = todayDate.toISOString().slice(0, 10);
+    const todayStr = dateToStr(todayDate);
     const latestIsToday = latestExam?.exam_date === todayStr;
     // 회진 확인: 오늘자 exam이 있고 reviewed_at이 찍혀 있으면 확인됨.
     const reviewed = latestIsToday && latestExam?.reviewed_at != null;
@@ -223,10 +230,15 @@ export function collectReports(
       consults: [...((p.consults_log as ConsultReferral[] | null) ?? [])].sort((a, b) =>
         a.date < b.date ? 1 : -1,
       ),
+      imaging: ((p.imaging_log as ImagingLogEntry[] | null) ?? [])
+        .slice()
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .map((e) => formatImaging(e, todayDate)),
       bmd: (p.bmd as string | null) ?? null,
       medicationsText: formatMedications(p.medications as Medications | null),
       labsText: formatLabs((latestExam?.labs as Labs | undefined) ?? null),
       crpTrend: buildCrpTrend(exams),
+      crpTrendPoints: buildCrpTrendPoints(exams),
       roundingNotes: ((p.rounding_notes as RoundingNote[] | null) ?? [])
         .filter((n) => !n.done)
         .map((n) => n.text),
@@ -334,6 +346,24 @@ function buildCrpTrend(exams: Record<string, unknown>[]): string {
       return `${p.crp} (${parseInt(m, 10)}/${parseInt(d, 10)})`;
     })
     .join(', ');
+}
+
+/** CRP 추이를 구조화 (출력물에서 값 볼드/날짜 작게 하기 위함) */
+export function buildCrpTrendPoints(
+  exams: Record<string, unknown>[],
+): { crp: number; label: string }[] {
+  const pts: { date: string; crp: number }[] = [];
+  for (const e of exams) {
+    const labs = e.labs as Labs | undefined;
+    const crp = labs?.crp;
+    if (crp == null) continue;
+    pts.push({ date: e.exam_date as string, crp });
+  }
+  if (pts.length === 0) return [];
+  return pts.slice(0, 5).reverse().map((p) => {
+    const [, m, d] = p.date.split('-');
+    return { crp: p.crp, label: `(${parseInt(m, 10)}/${parseInt(d, 10)})` };
+  });
 }
 
 /**

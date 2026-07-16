@@ -21,7 +21,11 @@ const FIXED_SOLAR_HOLIDAYS = new Set<string>([
 ]);
 
 function ymd(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  // KST 안전: toISOString()은 UTC로 변환해 하루 밀리므로 로컬 날짜 파트를 쓴다.
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 /** 해당 날짜가 공휴일인지 (고정 양력 or 수동 등록) */
