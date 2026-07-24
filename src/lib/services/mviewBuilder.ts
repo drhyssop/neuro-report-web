@@ -31,6 +31,8 @@ export interface MViewPatient {
   consultHistory: string | null;
   patientMemo: string | null;
   isOnMview: boolean;
+  /** drain이 모두 제거된 상태(회진 창 안). F/U 섹션에 합쳐질 때 "(drain 모두 제거)" 표기용. */
+  drainAllRemoved: boolean;
 }
 
 export interface MViewSection {
@@ -168,6 +170,7 @@ export function buildMViewPatient(p: MViewInputPatient, todayDate: Date): MViewP
     consultHistory: p.consult_history ?? null,
     patientMemo: p.patient_memo ?? null,
     isOnMview: !!p.is_on_mview,
+    drainAllRemoved: false, // 섹션 조립 단계에서 필요 시 true로 세팅
   };
 }
 
@@ -221,19 +224,28 @@ export function buildMViewSections(
     if (e.mviewActive === true) return true;
     return lookback.has(e.date);
   };
-  const followupImaging = sortByWard(
-    visible.filter((p) => ((p.imaging_log as ImagingLogEntry[] | null) ?? []).some(fuVisible)),
-  ).map(build);
+  // drain이 모두 제거된 환자 판정 (회진 창 안에 제거 완료)
+  const isDrainAllRemoved = (p: MViewInputPatient): boolean => {
+    const log = (p.drains_log as { ended_at?: string | null }[] | null) ?? [];
+    if (log.length === 0) return false;
+    // 아직 active drain이 남아있으면 제외 (모두 제거됐을 때만)
+    const anyActive = log.some((d) => !d.ended_at);
+    if (anyActive) return false;
+    // 모두 제거됨 — 제거 완료가 회진 창 안이면 노출 (공휴일 건너뜀)
+    return log.some((d) => d.ended_at != null && lookback.has(d.ended_at));
+  };
+
+  const isFollowup = (p: MViewInputPatient): boolean =>
+    ((p.imaging_log as ImagingLogEntry[] | null) ?? []).some(fuVisible);
+
+  // F/U 검사 환자 — drain까지 모두 제거된 사람은 여기서 "(drain 모두 제거)"로 함께 표기
+  const followupImaging = sortByWard(visible.filter(isFollowup)).map((p) => ({
+    ...build(p),
+    drainAllRemoved: isDrainAllRemoved(p),
+  }));
+  // Drain 제거 — F/U 섹션에 이미 올라간 환자는 중복 표시하지 않음
   const drainRemoved = sortByWard(
-    visible.filter((p) => {
-      const log = (p.drains_log as { ended_at?: string | null }[] | null) ?? [];
-      if (log.length === 0) return false;
-      // 아직 active drain이 남아있으면 제외 (모두 제거됐을 때만)
-      const anyActive = log.some((d) => !d.ended_at);
-      if (anyActive) return false;
-      // 모두 제거됨 — 제거 완료가 회진 창 안이면 노출 (공휴일 건너뜀)
-      return log.some((d) => d.ended_at != null && lookback.has(d.ended_at));
-    }),
+    visible.filter((p) => isDrainAllRemoved(p) && !isFollowup(p)),
   ).map(build);
   const consult = sortByWard(visible.filter((p) => p.is_consult)).map(build);
 

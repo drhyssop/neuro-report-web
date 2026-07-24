@@ -329,6 +329,7 @@ function MViewPrintRow({ patient: p, isFollowup }: { patient: MViewPatient; isFo
     <div className="text-xs leading-relaxed text-slate-800 dark:text-slate-200 print:text-black">
       <span className="font-medium">{head}</span>
       {ageStr && <span className="ml-1 text-slate-600 dark:text-slate-400">{ageStr}</span>}
+      {p.drainAllRemoved && <span className="ml-1 text-slate-700 dark:text-slate-300">(drain 모두 제거)</span>}
       {p.pastOpHistory && <span className="ml-1 font-semibold">· s/p {p.pastOpHistory}</span>}
       {p.isConsult && (
         <span className="ml-1 text-slate-700 dark:text-slate-300">· 협진({p.consultDept || ''})</span>
@@ -423,12 +424,13 @@ function mviewPatientToParagraphs(p: MViewPatient, isFollowup?: boolean): Paragr
   const ageStr = p.age != null ? `${p.age}${p.sex || ''}` : '';
   const sp = p.pastOpHistory ? ` · s/p ${p.pastOpHistory}` : '';
   const consult = p.isConsult ? ` · 협진(${p.consultDept || ''})` : '';
+  const drainNote = p.drainAllRemoved ? ' (drain 모두 제거)' : '';
 
   ps.push(
     new Paragraph({
       children: [
         new TextRun({ text: head, bold: true }),
-        new TextRun({ text: `${ageStr ? ` ${ageStr}` : ''}${sp}${consult}` }),
+        new TextRun({ text: `${ageStr ? ` ${ageStr}` : ''}${drainNote}${sp}${consult}` }),
       ],
     }),
   );

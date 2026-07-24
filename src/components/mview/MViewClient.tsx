@@ -84,7 +84,8 @@ export function MViewClient({ sections, pickerPatients }: Props) {
         const ageStr = p.age != null ? ` ${p.age}${p.sex || ''}` : '';
         const sp = p.pastOpHistory ? ` · s/p ${p.pastOpHistory}` : '';
         const consult = p.isConsult ? ` · 협진(${p.consultDept || ''})` : '';
-        lines.push(`${i + 1}. ${head}${ageStr}${sp}${consult}`);
+        const drainNote = p.drainAllRemoved ? ' (drain 모두 제거)' : '';
+        lines.push(`${i + 1}. ${head}${ageStr}${drainNote}${sp}${consult}`);
         if (isFu) {
           // F/U: 수술명 먼저 → 그 다음 영상
           if (p.surgeryName || p.surgeryLabel)
@@ -398,6 +399,9 @@ function SortableMViewCard({
               <span className="text-[10px] text-slate-500 dark:text-slate-400">
                 {p.age}{p.sex || ''}
               </span>
+            )}
+            {p.drainAllRemoved && (
+              <span className="text-[10px] text-cyan-700 dark:text-cyan-400">(drain 모두 제거)</span>
             )}
             {p.pastOpHistory && (
               <span className="text-[10px] font-semibold text-slate-600 dark:text-slate-300">
